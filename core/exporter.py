@@ -341,6 +341,8 @@ class GeoTIFFExporter:
             # Log every ~tiles_x completions (≈ once per row)
             log_interval = max(1, tiles_x)
 
+            # No tiled=True here — GDAL's block cache doesn't handle out-of-order
+            # writes to tiled TIFFs reliably. The final clipped output is tiled.
             with rasterio.open(
                 output_path, 'w',
                 driver='GTiff',
@@ -351,7 +353,6 @@ class GeoTIFFExporter:
                 crs=CRS.from_epsg(4326),
                 transform=transform,
                 compress=compress,
-                tiled=True,
                 **extra_options
             ) as dst:
                 tile_num = 0
@@ -378,6 +379,15 @@ class GeoTIFFExporter:
                         px_x = (tx - min_tile_x) * TILE_SIZE
                         px_y = (ty - min_tile_y) * TILE_SIZE
                         tile_h, tile_w = arr.shape[:2]
+
+                        # Clamp to file bounds — edge tiles from some servers are full 256px
+                        # even when the logical tile is smaller, which would overrun the file
+                        tile_h = min(tile_h, output_height - px_y)
+                        tile_w = min(tile_w, output_width - px_x)
+                        if tile_h <= 0 or tile_w <= 0:
+                            continue
+                        arr = arr[:tile_h, :tile_w]
+
                         window = windows.Window(px_x, px_y, tile_w, tile_h)
 
                         try:
