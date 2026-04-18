@@ -1,0 +1,13 @@
+# Claude Code local settings (contains local paths)
+.claude/settings.local.json
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# Temp export files
+*.tmp.tif
+
+# Environment
+.env
