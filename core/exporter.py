@@ -400,7 +400,22 @@ class GeoTIFFExporter:
                                 dst.write(arr[:, :, 1], 2, window=window)
                                 dst.write(arr[:, :, 2], 3, window=window)
                             except Exception as e:
+                                import traceback
+                                import shutil
+                                # Gather diagnostic context to identify root cause
+                                try:
+                                    file_size_mb = os.path.getsize(output_path) / 1e6
+                                except Exception:
+                                    file_size_mb = -1
+                                try:
+                                    free_mb = shutil.disk_usage(os.path.dirname(output_path) or '.').free / 1e6
+                                except Exception:
+                                    free_mb = -1
                                 self.log(f"  WARNING: Failed to write tile ({tx},{ty}): {e}")
+                                self.log(f"    tile_num={tile_num}/{self.total_tiles}  window=({px_x},{px_y},{tile_w},{tile_h})")
+                                self.log(f"    file_size={file_size_mb:.0f} MB  disk_free={free_mb:.0f} MB")
+                                self.log(f"    output dims={output_width}x{output_height}")
+                                self.log(f"    traceback: {traceback.format_exc().strip()}")
 
                         # Log once per row
                         row_time = time.time() - row_start
