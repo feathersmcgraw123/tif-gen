@@ -434,29 +434,89 @@ class GeoTIFFExporter:
         except Exception as e:
             return False, f"Tile download/write failed: {str(e)}"
 
+    def _windowed_clip(self, src, polygon_geom: dict, output_path: str):
+        """
+        Clip src raster to polygon using windowed reads — never loads the full
+        image into memory. Processes CHUNK_ROWS rows at a time.
+        """
+        from rasterio.features import geometry_mask
+
+        coords = polygon_geom['coordinates'][0]
+        lons = [c[0] for c in coords]
+        lats = [c[1] for c in coords]
+
+        # Compute pixel window that covers the polygon bounding box
+        clip_win = src.window(min(lons), min(lats), max(lons), max(lats))
+        col_off = max(0, int(clip_win.col_off))
+        row_off = max(0, int(clip_win.row_off))
+        col_end = min(src.width,  int(np.ceil(clip_win.col_off + clip_win.width)))
+        row_end = min(src.height, int(np.ceil(clip_win.row_off + clip_win.height)))
+        out_width  = col_end - col_off
+        out_height = row_end - row_off
+
+        out_transform = src.window_transform(
+            windows.Window(col_off, row_off, out_width, out_height)
+        )
+
+        if self.config.compression == 'JPEG':
+            compress = 'JPEG'
+            extra_options = {'JPEG_QUALITY': self.config.jpeg_quality}
+        else:
+            compress = 'LZW'
+            extra_options = {}
+
+        out_meta = src.meta.copy()
+        out_meta.update({
+            'height': out_height,
+            'width': out_width,
+            'transform': out_transform,
+            'compress': compress,
+            'tiled': True,
+            'BIGTIFF': 'YES',
+            'nodata': 0,
+            **extra_options
+        })
+
+        self.log(f"Clipping to polygon: {out_width}x{out_height} px output")
+
+        CHUNK_ROWS = 256
+        with rasterio.open(output_path, 'w', **out_meta) as dst:
+            for chunk_off in range(0, out_height, CHUNK_ROWS):
+                chunk_h = min(CHUNK_ROWS, out_height - chunk_off)
+
+                read_win  = windows.Window(col_off, row_off + chunk_off, out_width, chunk_h)
+                write_win = windows.Window(0, chunk_off, out_width, chunk_h)
+
+                # Build polygon mask for this chunk only (memory: chunk_h * out_width bytes)
+                chunk_transform = src.window_transform(read_win)
+                inside = geometry_mask(
+                    [polygon_geom],
+                    transform=chunk_transform,
+                    invert=True,
+                    out_shape=(chunk_h, out_width)
+                )
+
+                data = src.read(window=read_win)  # (bands, chunk_h, out_width)
+                data[:, ~inside] = 0
+                dst.write(data, window=write_win)
+
+                if chunk_off % (CHUNK_ROWS * 20) == 0 and chunk_off > 0:
+                    self.log(f"  Clip: {chunk_off / out_height * 100:.0f}%")
+
     def _clip_and_finalize(self, temp_output: str) -> Tuple[bool, str]:
-        """Clip to polygon and apply final settings."""
+        """Clip to polygon and optionally reproject, using windowed I/O throughout."""
         try:
-            # Load polygon from GeoJSON
             with open(self.temp_cutline_path, 'r') as f:
                 geojson = json.load(f)
-
-            # Extract polygon geometry
             polygon_geom = geojson['features'][0]['geometry']
 
-            # Open source raster
             with rasterio.open(temp_output) as src:
-                # Reproject if needed
                 if self.config.output_crs == 'EPSG:3857':
-                    # Need to reproject to 3857
                     dst_crs = CRS.from_epsg(3857)
-
-                    # Calculate transform for reprojection
                     transform, width, height = calculate_default_transform(
                         src.crs, dst_crs, src.width, src.height, *src.bounds
                     )
 
-                    # Prepare compression
                     if self.config.compression == 'JPEG':
                         compress = 'JPEG'
                         extra_options = {'JPEG_QUALITY': self.config.jpeg_quality}
@@ -464,7 +524,6 @@ class GeoTIFFExporter:
                         compress = 'LZW'
                         extra_options = {}
 
-                    # Create output with reprojection
                     kwargs = src.meta.copy()
                     kwargs.update({
                         'crs': dst_crs,
@@ -473,12 +532,11 @@ class GeoTIFFExporter:
                         'height': height,
                         'compress': compress,
                         'tiled': True,
-                        'BIGTIFF': 'IF_NEEDED',
+                        'BIGTIFF': 'YES',
                         **extra_options
                     })
 
                     temp_reproj = temp_output + ".reproj.tif"
-
                     with rasterio.open(temp_reproj, 'w', **kwargs) as dst:
                         for i in range(1, src.count + 1):
                             reproject(
@@ -491,52 +549,14 @@ class GeoTIFFExporter:
                                 resampling=Resampling.bilinear
                             )
 
-                    # Now clip the reprojected image
                     with rasterio.open(temp_reproj) as src_reproj:
-                        # Note: polygon is still in EPSG:4326, need to use it as-is with mask
-                        out_image, out_transform = rasterio_mask(src_reproj, [polygon_geom], crop=True, nodata=0)
+                        self._windowed_clip(src_reproj, polygon_geom, self.config.output_path)
 
-                        out_meta = src_reproj.meta.copy()
-                        out_meta.update({
-                            "height": out_image.shape[1],
-                            "width": out_image.shape[2],
-                            "transform": out_transform,
-                            "nodata": 0
-                        })
-
-                        with rasterio.open(self.config.output_path, 'w', **out_meta) as dest:
-                            dest.write(out_image)
-
-                    # Cleanup temp reprojected file
                     if os.path.exists(temp_reproj):
                         os.remove(temp_reproj)
 
                 else:
-                    # Just clip, no reprojection
-                    out_image, out_transform = rasterio_mask(src, [polygon_geom], crop=True, nodata=0)
-
-                    # Prepare compression
-                    if self.config.compression == 'JPEG':
-                        compress = 'JPEG'
-                        extra_options = {'JPEG_QUALITY': self.config.jpeg_quality}
-                    else:
-                        compress = 'LZW'
-                        extra_options = {}
-
-                    out_meta = src.meta.copy()
-                    out_meta.update({
-                        "height": out_image.shape[1],
-                        "width": out_image.shape[2],
-                        "transform": out_transform,
-                        "compress": compress,
-                        "tiled": True,
-                        "BIGTIFF": "YES",
-                        "nodata": 0,
-                        **extra_options
-                    })
-
-                    with rasterio.open(self.config.output_path, 'w', **out_meta) as dest:
-                        dest.write(out_image)
+                    self._windowed_clip(src, polygon_geom, self.config.output_path)
 
             return True, "Clip and finalize completed"
 
