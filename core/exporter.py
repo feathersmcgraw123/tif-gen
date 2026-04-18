@@ -337,7 +337,8 @@ class GeoTIFFExporter:
                 compress = 'LZW'
                 extra_options = {}
 
-            self.log(f"Creating GeoTIFF file: {output_width}x{output_height} pixels")
+            expected_gb = (output_width * output_height * 3) / 1e9
+            self.log(f"Creating GeoTIFF file: {output_width}x{output_height} px ({expected_gb:.1f} GB uncompressed, BigTIFF={'yes' if expected_gb > 4 else 'not needed'})")
             # Log every ~tiles_x completions (≈ once per row)
             log_interval = max(1, tiles_x)
 
@@ -351,7 +352,7 @@ class GeoTIFFExporter:
                 crs=CRS.from_epsg(4326),
                 transform=transform,
                 compress=compress,
-                BIGTIFF='IF_NEEDED',
+                BIGTIFF='YES',
                 **extra_options
             ) as dst:
                 tile_num = 0
@@ -529,7 +530,7 @@ class GeoTIFFExporter:
                         "transform": out_transform,
                         "compress": compress,
                         "tiled": True,
-                        "BIGTIFF": "IF_NEEDED",
+                        "BIGTIFF": "YES",
                         "nodata": 0,
                         **extra_options
                     })
