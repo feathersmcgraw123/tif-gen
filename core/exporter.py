@@ -341,8 +341,6 @@ class GeoTIFFExporter:
             # Log every ~tiles_x completions (≈ once per row)
             log_interval = max(1, tiles_x)
 
-            # No tiled=True here — GDAL's block cache doesn't handle out-of-order
-            # writes to tiled TIFFs reliably. The final clipped output is tiled.
             with rasterio.open(
                 output_path, 'w',
                 driver='GTiff',
@@ -358,54 +356,59 @@ class GeoTIFFExporter:
                 tile_num = 0
 
                 with ThreadPoolExecutor(max_workers=NUM_WORKERS) as executor:
-                    futures = {
-                        executor.submit(self._process_tile, tx, ty, zoom, tile_source): (tx, ty)
-                        for ty in range(min_tile_y, max_tile_y + 1)
-                        for tx in range(min_tile_x, max_tile_x + 1)
-                    }
-
-                    for fut in as_completed(futures):
+                    for ty in range(min_tile_y, max_tile_y + 1):
                         if self.is_cancelled:
-                            for f in futures:
-                                f.cancel()
                             return False, "Export cancelled by user"
 
-                        tx, ty, arr = fut.result()
-                        if arr is None:
-                            continue  # tile was skipped due to cancellation
+                        row_num = ty - min_tile_y + 1
+                        row_start = time.time()
 
-                        tile_num += 1
-                        self.current_tile = tile_num
-                        px_x = (tx - min_tile_x) * TILE_SIZE
-                        px_y = (ty - min_tile_y) * TILE_SIZE
-                        tile_h, tile_w = arr.shape[:2]
+                        # Download all tiles in this row concurrently
+                        row_futures = {
+                            tx: executor.submit(self._process_tile, tx, ty, zoom, tile_source)
+                            for tx in range(min_tile_x, max_tile_x + 1)
+                        }
 
-                        # Clamp to file bounds — edge tiles from some servers are full 256px
-                        # even when the logical tile is smaller, which would overrun the file
-                        tile_h = min(tile_h, output_height - px_y)
-                        tile_w = min(tile_w, output_width - px_x)
-                        if tile_h <= 0 or tile_w <= 0:
-                            continue
-                        arr = arr[:tile_h, :tile_w]
+                        # Write in left-to-right order — sequential writes keep GDAL happy
+                        for tx in range(min_tile_x, max_tile_x + 1):
+                            try:
+                                _, _, arr = row_futures[tx].result()
+                            except Exception as e:
+                                self.log(f"  WARNING: Tile ({tx},{ty}) failed: {e}")
+                                continue
 
-                        window = windows.Window(px_x, px_y, tile_w, tile_h)
+                            if arr is None:
+                                continue
 
-                        try:
-                            dst.write(arr[:, :, 0], 1, window=window)
-                            dst.write(arr[:, :, 1], 2, window=window)
-                            dst.write(arr[:, :, 2], 3, window=window)
-                        except Exception as e:
-                            self.log(f"  WARNING: Failed to write tile ({tx},{ty}): {e}")
+                            tile_num += 1
+                            self.current_tile = tile_num
+                            px_x = (tx - min_tile_x) * TILE_SIZE
+                            px_y = (ty - min_tile_y) * TILE_SIZE
+                            tile_h, tile_w = arr.shape[:2]
 
-                        # Throttle progress/log to once per row-equivalent
-                        if tile_num % log_interval == 0 or tile_num == self.total_tiles:
-                            elapsed = time.time() - self.start_time
-                            pct = tile_num / self.total_tiles * 100
-                            eta = elapsed / tile_num * (self.total_tiles - tile_num) if tile_num < self.total_tiles else 0
-                            self.log(f"  {tile_num}/{self.total_tiles} tiles ({pct:.0f}%) - ETA {eta/60:.1f} min")
-                            if self.progress_callback:
-                                row_num = ty - min_tile_y + 1
-                                self.progress_callback(tile_num, self.total_tiles, row_num, tiles_y, elapsed)
+                            # Clamp edge tiles to file bounds
+                            tile_h = min(tile_h, output_height - px_y)
+                            tile_w = min(tile_w, output_width - px_x)
+                            if tile_h <= 0 or tile_w <= 0:
+                                continue
+                            arr = arr[:tile_h, :tile_w]
+
+                            window = windows.Window(px_x, px_y, tile_w, tile_h)
+                            try:
+                                dst.write(arr[:, :, 0], 1, window=window)
+                                dst.write(arr[:, :, 1], 2, window=window)
+                                dst.write(arr[:, :, 2], 3, window=window)
+                            except Exception as e:
+                                self.log(f"  WARNING: Failed to write tile ({tx},{ty}): {e}")
+
+                        # Log once per row
+                        row_time = time.time() - row_start
+                        elapsed = time.time() - self.start_time
+                        pct = row_num / tiles_y * 100
+                        eta = elapsed / row_num * (tiles_y - row_num) if row_num < tiles_y else 0
+                        self.log(f"  Row {row_num}/{tiles_y} ({pct:.0f}%) - {row_time:.1f}s - ETA {eta/60:.1f} min")
+                        if self.progress_callback:
+                            self.progress_callback(tile_num, self.total_tiles, row_num, tiles_y, elapsed)
 
             elapsed_total = time.time() - self.start_time
             self.log(f"Download and export complete in {elapsed_total/60:.1f} min")
