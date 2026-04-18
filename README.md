@@ -24,93 +24,34 @@ Works on: **Windows** | **Linux** | **macOS** | **NixOS**
 
 ## Installation
 
-### Universal Installation (All Platforms)
+### Windows
+
+1. Install [Python 3.7+](https://www.python.org/downloads/) — check **"Add Python to PATH"**
+2. Double-click **`run.bat`**
+
+That's it. The script creates a virtual environment and installs all dependencies automatically on first run.
+
+### macOS / Linux
 
 ```bash
-# 1. Clone the repository
-git clone <repository-url>
-cd satellite-imagery-export
+git clone https://github.com/feathersmcgraw123/tiffy.git
+cd tiffy
+chmod +x run.sh
+./run.sh
+```
 
-# 2. Install dependencies (one command!)
-pip install -r requirements.txt
+Dependencies are installed automatically into a local `.venv` on first run.
 
-# 3. Run the application
+### NixOS
+
+```bash
+git clone https://github.com/feathersmcgraw123/tiffy.git
+cd tiffy
+nix-shell
 python main.py
 ```
 
-**That's it!** No OSGeo4W, no Conda, no compilers needed.
-
-### Platform-Specific Notes
-
-<details>
-<summary><b>Windows</b></summary>
-
-```batch
-# Install Python 3.7+ from python.org if not already installed
-pip install -r requirements.txt
-python main.py
-```
-
-Or double-click `run.bat`
-
-</details>
-
-<details>
-<summary><b>Linux / Ubuntu / Debian</b></summary>
-
-```bash
-pip3 install -r requirements.txt
-python3 main.py
-```
-
-Or run `./run.sh`
-
-</details>
-
-<details>
-<summary><b>NixOS</b></summary>
-
-Using nix-shell (recommended):
-
-```bash
-# Create shell.nix:
-nix-shell -p python3 python3Packages.pip python3Packages.pyqt5
-
-# Inside nix-shell:
-pip install rasterio Pillow requests numpy
-python main.py
-```
-
-Or add to your environment:
-
-```nix
-environment.systemPackages = with pkgs; [
-  python3
-  python3Packages.pyqt5
-  python3Packages.rasterio
-  python3Packages.pillow
-  python3Packages.requests
-  python3Packages.numpy
-];
-```
-
-</details>
-
-<details>
-<summary><b>macOS</b></summary>
-
-```bash
-pip3 install -r requirements.txt
-python3 main.py
-```
-
-If you encounter issues, use Homebrew:
-```bash
-brew install python3
-pip3 install -r requirements.txt
-```
-
-</details>
+A `shell.nix` is included with all dependencies declared.
 
 ## Quick Start
 
