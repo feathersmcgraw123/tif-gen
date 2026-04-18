@@ -351,6 +351,7 @@ class GeoTIFFExporter:
                 crs=CRS.from_epsg(4326),
                 transform=transform,
                 compress=compress,
+                BIGTIFF='IF_NEEDED',
                 **extra_options
             ) as dst:
                 tile_num = 0
@@ -456,6 +457,7 @@ class GeoTIFFExporter:
                         'height': height,
                         'compress': compress,
                         'tiled': True,
+                        'BIGTIFF': 'IF_NEEDED',
                         **extra_options
                     })
 
@@ -512,6 +514,7 @@ class GeoTIFFExporter:
                         "transform": out_transform,
                         "compress": compress,
                         "tiled": True,
+                        "BIGTIFF": "IF_NEEDED",
                         "nodata": 0,
                         **extra_options
                     })
