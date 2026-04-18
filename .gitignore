@@ -10,6 +10,11 @@ __pycache__/
 # Temp export files
 *.tmp.tif
 
+# PyInstaller
+dist/
+build/
+*.spec
+
 # Environment
 .env
 

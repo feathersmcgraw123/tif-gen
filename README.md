@@ -24,14 +24,32 @@ Works on: **Windows** | **Linux** | **macOS** | **NixOS**
 
 ## Installation
 
-### Windows
+### Option A — Download a pre-built release (easiest)
+
+Go to the [Releases page](https://github.com/feathersmcgraw123/tiffy/releases) and download the zip for your platform:
+
+| Platform | File |
+|----------|------|
+| Windows  | `tiffy-windows.zip` — extract and run `tiffy.exe` |
+| macOS    | `tiffy-macos.zip` — extract and double-click `tiffy.app` |
+| Linux    | `tiffy-linux.zip` — extract and run `./tiffy` |
+
+No Python or dependencies required.
+
+> **NixOS** — pre-built Linux binaries won't work due to NixOS's non-standard library paths. Use Option B below instead.
+
+---
+
+### Option B — Run from source
+
+**Windows**
 
 1. Install [Python 3.7+](https://www.python.org/downloads/) — check **"Add Python to PATH"**
 2. Double-click **`run.bat`**
 
-That's it. The script creates a virtual environment and installs all dependencies automatically on first run.
+The script creates a virtual environment and installs all dependencies automatically on first run.
 
-### macOS / Linux
+**macOS / Linux**
 
 ```bash
 git clone https://github.com/feathersmcgraw123/tiffy.git
@@ -40,9 +58,7 @@ chmod +x run.sh
 ./run.sh
 ```
 
-Dependencies are installed automatically into a local `.venv` on first run.
-
-### NixOS
+**NixOS**
 
 ```bash
 git clone https://github.com/feathersmcgraw123/tiffy.git
