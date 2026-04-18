@@ -44,7 +44,8 @@ class ExportConfig:
                  jpeg_quality: int = 90,
                  output_crs: str = 'EPSG:4326',
                  render_delay: float = 0.2,
-                 zoom_level: Optional[int] = None):
+                 zoom_level: Optional[int] = None,
+                 tile_cache_dir: Optional[str] = None):
         """
         Initialize export configuration.
 
@@ -68,6 +69,10 @@ class ExportConfig:
         self.output_crs = output_crs
         self.render_delay = render_delay
         self.zoom_level = zoom_level
+        # Default cache: ~/.tiffy/tile_cache  (cross-platform, persists between runs)
+        self.tile_cache_dir = tile_cache_dir or os.path.join(
+            os.path.expanduser('~'), '.tiffy', 'tile_cache'
+        )
 
 
 class GeoTIFFExporter:
@@ -275,19 +280,40 @@ class GeoTIFFExporter:
 
         url = self._get_tile_url(tile_source, tx, ty, zoom)
 
-        # Each thread gets its own downloader/session (requests.Session is not thread-safe)
-        if not hasattr(self._thread_local, 'downloader'):
-            self._thread_local.downloader = TileDownloader()
-        downloader = self._thread_local.downloader
+        # Tile cache: {cache_dir}/{source_id}/{zoom}/{tx}/{ty}.png
+        cache_path = os.path.join(
+            self.config.tile_cache_dir,
+            self.config.tile_source_id, str(zoom), str(tx), f"{ty}.png"
+        )
 
-        max_retries = 3
         img = None
-        for retry in range(max_retries):
-            img = downloader.download_tile(url, delay=self.config.render_delay)
+        if os.path.exists(cache_path):
+            try:
+                img = Image.open(cache_path)
+                img.load()
+            except Exception:
+                img = None  # Corrupted cache entry — re-download
+
+        if img is None:
+            # Each thread gets its own downloader/session (requests.Session is not thread-safe)
+            if not hasattr(self._thread_local, 'downloader'):
+                self._thread_local.downloader = TileDownloader()
+            downloader = self._thread_local.downloader
+
+            max_retries = 3
+            for retry in range(max_retries):
+                img = downloader.download_tile(url, delay=self.config.render_delay)
+                if img is not None:
+                    break
+                if retry < max_retries - 1:
+                    time.sleep((retry + 1) * 1.0)
+
             if img is not None:
-                break
-            if retry < max_retries - 1:
-                time.sleep((retry + 1) * 1.0)
+                try:
+                    os.makedirs(os.path.dirname(cache_path), exist_ok=True)
+                    img.save(cache_path, 'PNG')
+                except Exception:
+                    pass  # Cache write failure is non-fatal
 
         if img is None:
             img = Image.new('RGB', (TILE_SIZE, TILE_SIZE), (0, 0, 0))
@@ -339,6 +365,7 @@ class GeoTIFFExporter:
 
             expected_gb = (output_width * output_height * 3) / 1e9
             self.log(f"Creating GeoTIFF file: {output_width}x{output_height} px ({expected_gb:.1f} GB uncompressed, BigTIFF={'yes' if expected_gb > 4 else 'not needed'})")
+            self.log(f"Tile cache: {self.config.tile_cache_dir}")
             # Log every ~tiles_x completions (≈ once per row)
             log_interval = max(1, tiles_x)
 
