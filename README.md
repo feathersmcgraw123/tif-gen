@@ -26,15 +26,17 @@ Works on: **Windows** | **Linux** | **macOS** | **NixOS**
 
 ### Option A — Download a pre-built release (easiest)
 
-Go to the [Releases page](https://github.com/feathersmcgraw123/tif-gen/releases) and download the zip for your platform:
+Go to the [Releases page](https://github.com/feathersmcgraw123/tif-gen/releases) and download the file for your platform:
 
 | Platform | File |
 |----------|------|
-| Windows  | `tiffy-windows.zip` — extract and run `tiffy.exe` |
+| Windows  | `tiffy-windows.exe` — download and double-click, no extraction needed |
 | macOS    | `tiffy-macos.zip` — extract and double-click `tiffy.app` |
 | Linux    | `tiffy-linux.zip` — extract and run `./tiffy` |
 
 No Python or dependencies required.
+
+> **Windows note:** the first launch takes ~10-20 seconds since the app unpacks itself to a temp folder before starting — this is normal for a single-file .exe. Subsequent launches are the same. Windows SmartScreen may warn about an unrecognized publisher since the exe isn't code-signed; click "More info" → "Run anyway".
 
 > **NixOS** — pre-built Linux binaries won't work due to NixOS's non-standard library paths. Use Option B below instead.
 

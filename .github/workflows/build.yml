@@ -42,8 +42,20 @@ jobs:
       - name: Install Python dependencies
         run: pip install -r requirements.txt pyinstaller
 
-      - name: Build (Windows / Linux)
-        if: runner.os != 'macOS'
+      - name: Build (Windows)
+        if: runner.os == 'Windows'
+        run: >
+          pyinstaller
+          --name tiffy
+          --onefile
+          --windowed
+          --collect-all rasterio
+          --hidden-import PyQt5.QtWebEngineWidgets
+          --hidden-import PyQt5.QtWebEngineCore
+          main.py
+
+      - name: Build (Linux)
+        if: runner.os == 'Linux'
         run: >
           pyinstaller
           --name tiffy
@@ -68,25 +80,31 @@ jobs:
       - name: Package (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
-        run: Compress-Archive -Path dist/tiffy -DestinationPath ${{ matrix.artifact }}.zip
+        run: |
+          Move-Item dist/tiffy.exe tiffy-windows.exe
+          Add-Content $env:GITHUB_ENV "ASSET_PATH=tiffy-windows.exe"
 
       - name: Package (macOS)
         if: runner.os == 'macOS'
-        run: zip -r ${{ matrix.artifact }}.zip dist/tiffy.app
+        run: |
+          zip -r ${{ matrix.artifact }}.zip dist/tiffy.app
+          echo "ASSET_PATH=${{ matrix.artifact }}.zip" >> $GITHUB_ENV
 
       - name: Package (Linux)
         if: runner.os == 'Linux'
-        run: zip -r ${{ matrix.artifact }}.zip dist/tiffy
+        run: |
+          zip -r ${{ matrix.artifact }}.zip dist/tiffy
+          echo "ASSET_PATH=${{ matrix.artifact }}.zip" >> $GITHUB_ENV
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.artifact }}
-          path: ${{ matrix.artifact }}.zip
+          path: ${{ env.ASSET_PATH }}
           retention-days: 30
 
       - name: Attach to release
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
-          files: ${{ matrix.artifact }}.zip
+          files: ${{ env.ASSET_PATH }}
