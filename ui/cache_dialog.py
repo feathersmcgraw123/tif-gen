@@ -69,7 +69,7 @@ class CacheDialog(QDialog):
 
         self.path_label = QLabel(f"Cache location: {self.cache_dir}")
         self.path_label.setWordWrap(True)
-        self.path_label.setStyleSheet("QLabel { color: #666; }")
+        self.path_label.setStyleSheet("QLabel { color: #9aa2b8; }")
         layout.addWidget(self.path_label)
 
         self.total_label = QLabel("Computing cache stats...")
@@ -92,7 +92,7 @@ class CacheDialog(QDialog):
         button_layout.addStretch()
 
         self.clear_btn = QPushButton("Clear Cache")
-        self.clear_btn.setStyleSheet("QPushButton { color: #c00; }")
+        self.clear_btn.setObjectName("dangerButton")
         self.clear_btn.setEnabled(False)
         self.clear_btn.clicked.connect(self.on_clear_clicked)
         button_layout.addWidget(self.clear_btn)

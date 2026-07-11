@@ -92,7 +92,7 @@ class PolygonDialog(QDialog):
 
         # Info label
         self.info_label = QLabel("")
-        self.info_label.setStyleSheet("QLabel { color: #666; }")
+        self.info_label.setStyleSheet("QLabel { color: #9aa2b8; }")
         layout.addWidget(self.info_label)
 
         # Dialog buttons
@@ -105,6 +105,7 @@ class PolygonDialog(QDialog):
         button_layout.addStretch()
 
         self.ok_btn = QPushButton(self.tr('btn_ok'))
+        self.ok_btn.setObjectName("primaryButton")
         self.ok_btn.clicked.connect(self.on_ok_clicked)
         self.ok_btn.setEnabled(False)
         button_layout.addWidget(self.ok_btn)
@@ -175,7 +176,7 @@ class PolygonDialog(QDialog):
         file_layout.addWidget(QLabel("File:"))
 
         self.file_path_edit = QLabel("No file selected")
-        self.file_path_edit.setStyleSheet("QLabel { color: #666; }")
+        self.file_path_edit.setStyleSheet("QLabel { color: #9aa2b8; }")
         file_layout.addWidget(self.file_path_edit)
 
         browse_btn = QPushButton("Browse...")

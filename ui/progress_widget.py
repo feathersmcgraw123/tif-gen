@@ -84,7 +84,7 @@ class ProgressWidget(QWidget):
         status_layout.addWidget(self.last_tile_label)
 
         self.cache_label = QLabel("Cache: 0 hit / 0 miss")
-        self.cache_label.setStyleSheet("QLabel { color: #2a7; font-weight: bold; }")
+        self.cache_label.setStyleSheet("QLabel { color: #34d399; font-weight: bold; }")
         status_layout.addWidget(self.cache_label)
 
         status_layout.addStretch()
@@ -96,7 +96,7 @@ class ProgressWidget(QWidget):
         self.tile_preview_label.setFixedSize(96, 96)
         self.tile_preview_label.setAlignment(Qt.AlignCenter)
         self.tile_preview_label.setStyleSheet(
-            "QLabel { border: 1px solid #999; background-color: #222; }"
+            "QLabel { border: 1px solid #333849; border-radius: 6px; background-color: #0e1015; }"
         )
         status_row.addWidget(self.tile_preview_label)
 
@@ -111,6 +111,7 @@ class ProgressWidget(QWidget):
         button_layout.addWidget(self.pause_resume_btn)
 
         self.cancel_btn = QPushButton("Cancel")
+        self.cancel_btn.setObjectName("dangerButton")
         self.cancel_btn.clicked.connect(self.on_cancel_clicked)
         self.cancel_btn.setEnabled(False)
         button_layout.addWidget(self.cancel_btn)
@@ -145,7 +146,7 @@ class ProgressWidget(QWidget):
         self.clip_preview_label.setFixedSize(220, 220)
         self.clip_preview_label.setAlignment(Qt.AlignCenter)
         self.clip_preview_label.setStyleSheet(
-            "QLabel { border: 1px solid #999; background-color: #222; }"
+            "QLabel { border: 1px solid #333849; border-radius: 6px; background-color: #0e1015; }"
         )
         clip_layout.addWidget(self.clip_preview_label)
 

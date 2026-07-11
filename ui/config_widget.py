@@ -202,7 +202,7 @@ class ConfigWidget(QWidget):
 
         # Estimated size
         self.size_label = QLabel("Estimated Size: Not calculated")
-        self.size_label.setStyleSheet("QLabel { color: #666; font-style: italic; }")
+        self.size_label.setStyleSheet("QLabel { color: #9aa2b8; font-style: italic; }")
         layout.addWidget(self.size_label)
 
         layout.addStretch()
