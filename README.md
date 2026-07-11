@@ -26,7 +26,7 @@ Works on: **Windows** | **Linux** | **macOS** | **NixOS**
 
 ### Option A — Download a pre-built release (easiest)
 
-Go to the [Releases page](https://github.com/feathersmcgraw123/tiffy/releases) and download the zip for your platform:
+Go to the [Releases page](https://github.com/feathersmcgraw123/tif-gen/releases) and download the zip for your platform:
 
 | Platform | File |
 |----------|------|
@@ -52,8 +52,8 @@ The script creates a virtual environment and installs all dependencies automatic
 **macOS / Linux**
 
 ```bash
-git clone https://github.com/feathersmcgraw123/tiffy.git
-cd tiffy
+git clone https://github.com/feathersmcgraw123/tif-gen.git
+cd tif-gen
 chmod +x run.sh
 ./run.sh
 ```
@@ -61,8 +61,8 @@ chmod +x run.sh
 **NixOS**
 
 ```bash
-git clone https://github.com/feathersmcgraw123/tiffy.git
-cd tiffy
+git clone https://github.com/feathersmcgraw123/tif-gen.git
+cd tif-gen
 nix-shell
 python main.py
 ```
