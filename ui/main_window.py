@@ -11,7 +11,8 @@ Integrates all components:
 
 from PyQt5.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QSplitter,
-    QGroupBox, QPushButton, QLabel, QMessageBox, QMenuBar, QMenu, QAction
+    QGroupBox, QPushButton, QLabel, QMessageBox, QMenuBar, QMenu, QAction,
+    QScrollArea, QFrame
 )
 from PyQt5.QtCore import Qt
 
@@ -39,7 +40,7 @@ class MainWindow(QMainWindow):
         self.translator = get_translator()
 
         self.setWindowTitle(self.translator.tr('app_title'))
-        self.setMinimumSize(1000, 700)
+        self.setMinimumSize(1000, 750)
 
         self.init_ui()
         self.log_startup()
@@ -111,7 +112,15 @@ class MainWindow(QMainWindow):
         self.progress_widget.pause_requested.connect(self.on_pause_requested)
         self.progress_widget.resume_requested.connect(self.on_resume_requested)
         self.progress_widget.cancel_requested.connect(self.on_cancel_requested)
-        progress_layout.addWidget(self.progress_widget)
+
+        # Scroll area so fixed-size elements (tile/assembly previews) are never
+        # clipped by the window edge on smaller screens — content becomes
+        # scrollable instead of silently cut off.
+        progress_scroll = QScrollArea()
+        progress_scroll.setWidgetResizable(True)
+        progress_scroll.setFrameShape(QFrame.NoFrame)
+        progress_scroll.setWidget(self.progress_widget)
+        progress_layout.addWidget(progress_scroll)
 
         self.progress_group.setLayout(progress_layout)
         main_layout.addWidget(self.progress_group, stretch=1)
@@ -268,6 +277,8 @@ class MainWindow(QMainWindow):
         self.export_worker = ExportWorker(exporter)
         self.export_worker.progress_updated.connect(self.on_progress_updated)
         self.export_worker.log_message.connect(self.on_log_message)
+        self.export_worker.tile_downloaded.connect(self.on_tile_downloaded)
+        self.export_worker.clip_progress.connect(self.on_clip_progress)
         self.export_worker.export_complete.connect(self.on_export_complete)
 
         # Update UI
@@ -287,6 +298,14 @@ class MainWindow(QMainWindow):
     def on_log_message(self, message):
         """Handle log message from export worker."""
         self.progress_widget.add_log(message)
+
+    def on_tile_downloaded(self, tile_x, tile_y, arr):
+        """Handle newly downloaded tile from export worker."""
+        self.progress_widget.update_tile_preview(tile_x, tile_y, arr)
+
+    def on_clip_progress(self, canvas, rows_done, total_rows):
+        """Handle clip/assembly progress update from export worker."""
+        self.progress_widget.update_clip_preview(canvas, rows_done, total_rows)
 
     def on_export_complete(self, success, message):
         """Handle export completion."""

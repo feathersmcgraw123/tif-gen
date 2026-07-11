@@ -90,6 +90,8 @@ class GeoTIFFExporter:
         self.is_cancelled = False
         self.progress_callback: Optional[Callable] = None
         self.log_callback: Optional[Callable] = None
+        self.tile_callback: Optional[Callable] = None
+        self.clip_callback: Optional[Callable] = None
 
         # Temporary files
         self.temp_cutline_path = None
@@ -106,6 +108,14 @@ class GeoTIFFExporter:
     def set_log_callback(self, callback: Callable[[str], None]):
         """Set log message callback function."""
         self.log_callback = callback
+
+    def set_tile_callback(self, callback: Callable[[int, int, np.ndarray], None]):
+        """Set callback invoked with (tile_x, tile_y, rgb_array) after each tile is written."""
+        self.tile_callback = callback
+
+    def set_clip_callback(self, callback: Callable[[np.ndarray, int, int], None]):
+        """Set callback invoked with (preview_canvas, rows_done, total_rows) after each clip chunk is written."""
+        self.clip_callback = callback
 
     def log(self, message: str):
         """Log a message."""
@@ -427,6 +437,8 @@ class GeoTIFFExporter:
                                 dst.write(arr[:, :, 0], 1, window=window)
                                 dst.write(arr[:, :, 1], 2, window=window)
                                 dst.write(arr[:, :, 2], 3, window=window)
+                                if self.tile_callback:
+                                    self.tile_callback(tx, ty, arr)
                             except Exception as e:
                                 import traceback
                                 import shutil
@@ -506,6 +518,15 @@ class GeoTIFFExporter:
 
         self.log(f"Clipping to polygon: {out_width}x{out_height} px output")
 
+        # Downscaled canvas that gets painted in strip-by-strip as chunks complete,
+        # so the UI can show the image being assembled without holding full-res data.
+        PREVIEW_MAX_DIM = 320
+        preview_scale = min(PREVIEW_MAX_DIM / out_width, PREVIEW_MAX_DIM / out_height, 1.0)
+        canvas_w = max(1, round(out_width * preview_scale))
+        canvas_h = max(1, round(out_height * preview_scale))
+        preview_canvas = np.zeros((canvas_h, canvas_w, 3), dtype=np.uint8)
+        col_idx = np.linspace(0, out_width - 1, canvas_w).astype(int)
+
         CHUNK_ROWS = 256
         with rasterio.open(output_path, 'w', **out_meta) as dst:
             for chunk_off in range(0, out_height, CHUNK_ROWS):
@@ -526,6 +547,19 @@ class GeoTIFFExporter:
                 data = src.read(window=read_win)  # (bands, chunk_h, out_width)
                 data[:, ~inside] = 0
                 dst.write(data, window=write_win)
+
+                # Paint this chunk's rows into the preview canvas (nearest-neighbor downsample)
+                rows_done = chunk_off + chunk_h
+                row_start = int(chunk_off * preview_scale)
+                row_end = min(canvas_h, max(row_start + 1, round(rows_done * preview_scale)))
+                n_rows = row_end - row_start
+                if n_rows > 0:
+                    row_idx = np.linspace(0, chunk_h - 1, n_rows).astype(int)
+                    chunk_rgb = np.transpose(data, (1, 2, 0))  # (chunk_h, out_width, bands)
+                    preview_canvas[row_start:row_end] = chunk_rgb[row_idx][:, col_idx]
+
+                if self.clip_callback:
+                    self.clip_callback(preview_canvas.copy(), rows_done, out_height)
 
                 if chunk_off % (CHUNK_ROWS * 20) == 0 and chunk_off > 0:
                     self.log(f"  Clip: {chunk_off / out_height * 100:.0f}%")

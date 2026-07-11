@@ -16,6 +16,8 @@ from PyQt5.QtWidgets import (
     QPushButton, QTextEdit, QGroupBox
 )
 from PyQt5.QtCore import Qt, pyqtSignal
+from PyQt5.QtGui import QImage, QPixmap
+import numpy as np
 
 
 class ProgressWidget(QWidget):
@@ -56,24 +58,45 @@ class ProgressWidget(QWidget):
         self.progress_bar.setTextVisible(True)
         progress_layout.addWidget(self.progress_bar)
 
-        # Status labels
-        status_layout = QHBoxLayout()
+        # Status labels + last tile preview
+        status_row = QHBoxLayout()
+
+        status_layout = QVBoxLayout()
+        info_layout = QHBoxLayout()
 
         self.tile_label = QLabel("Tiles: 0 / 0")
-        status_layout.addWidget(self.tile_label)
+        info_layout.addWidget(self.tile_label)
 
         self.row_label = QLabel("Row: 0 / 0")
-        status_layout.addWidget(self.row_label)
+        info_layout.addWidget(self.row_label)
 
         self.elapsed_label = QLabel("Elapsed: 00:00")
-        status_layout.addWidget(self.elapsed_label)
+        info_layout.addWidget(self.elapsed_label)
 
         self.eta_label = QLabel("ETA: --:--")
-        status_layout.addWidget(self.eta_label)
+        info_layout.addWidget(self.eta_label)
+
+        info_layout.addStretch()
+
+        status_layout.addLayout(info_layout)
+
+        self.last_tile_label = QLabel("Last tile: --")
+        status_layout.addWidget(self.last_tile_label)
 
         status_layout.addStretch()
 
-        progress_layout.addLayout(status_layout)
+        status_row.addLayout(status_layout)
+
+        # Thumbnail of the most recently downloaded tile
+        self.tile_preview_label = QLabel()
+        self.tile_preview_label.setFixedSize(96, 96)
+        self.tile_preview_label.setAlignment(Qt.AlignCenter)
+        self.tile_preview_label.setStyleSheet(
+            "QLabel { border: 1px solid #999; background-color: #222; }"
+        )
+        status_row.addWidget(self.tile_preview_label)
+
+        progress_layout.addLayout(status_row)
 
         # Control buttons
         button_layout = QHBoxLayout()
@@ -94,6 +117,36 @@ class ProgressWidget(QWidget):
 
         progress_group.setLayout(progress_layout)
         layout.addWidget(progress_group)
+
+        # Clip & assembly group (separate stage, runs after all tiles are downloaded)
+        clip_group = QGroupBox("Clipping && Assembly")
+        clip_layout = QHBoxLayout()
+
+        clip_info_layout = QVBoxLayout()
+
+        self.clip_progress_bar = QProgressBar()
+        self.clip_progress_bar.setRange(0, 100)
+        self.clip_progress_bar.setValue(0)
+        self.clip_progress_bar.setTextVisible(True)
+        clip_info_layout.addWidget(self.clip_progress_bar)
+
+        self.clip_rows_label = QLabel("Not started")
+        clip_info_layout.addWidget(self.clip_rows_label)
+
+        clip_info_layout.addStretch()
+        clip_layout.addLayout(clip_info_layout)
+
+        # Live preview canvas — painted in strip-by-strip as chunks are clipped/written
+        self.clip_preview_label = QLabel()
+        self.clip_preview_label.setFixedSize(220, 220)
+        self.clip_preview_label.setAlignment(Qt.AlignCenter)
+        self.clip_preview_label.setStyleSheet(
+            "QLabel { border: 1px solid #999; background-color: #222; }"
+        )
+        clip_layout.addWidget(self.clip_preview_label)
+
+        clip_group.setLayout(clip_layout)
+        layout.addWidget(clip_group)
 
         # Log output
         log_group = QGroupBox("Log Output")
@@ -160,6 +213,53 @@ class ProgressWidget(QWidget):
         else:
             self.eta_label.setText("ETA: --:--")
 
+    def update_tile_preview(self, tile_x: int, tile_y: int, arr: np.ndarray):
+        """
+        Update the thumbnail preview with the most recently downloaded tile.
+
+        Args:
+            tile_x: Tile X coordinate
+            tile_y: Tile Y coordinate
+            arr: RGB uint8 numpy array (height, width, 3)
+        """
+        self.last_tile_label.setText(f"Last tile: ({tile_x}, {tile_y})")
+
+        arr = np.ascontiguousarray(arr)
+        h, w = arr.shape[:2]
+        bytes_per_line = 3 * w
+        # .copy() forces Qt to own the pixel data, decoupling it from arr's buffer
+        image = QImage(arr.data, w, h, bytes_per_line, QImage.Format_RGB888).copy()
+        pixmap = QPixmap.fromImage(image).scaled(
+            self.tile_preview_label.width(), self.tile_preview_label.height(),
+            Qt.KeepAspectRatio, Qt.SmoothTransformation
+        )
+        self.tile_preview_label.setPixmap(pixmap)
+
+    def update_clip_preview(self, canvas: np.ndarray, rows_done: int, total_rows: int):
+        """
+        Update the clip/assembly stage display with the latest preview canvas.
+
+        Args:
+            canvas: RGB uint8 numpy array (height, width, 3) — the assembled image so far
+            rows_done: Output rows clipped and written so far
+            total_rows: Total output rows
+        """
+        if total_rows > 0:
+            progress = int((rows_done / total_rows) * 100)
+            self.clip_progress_bar.setValue(progress)
+
+        self.clip_rows_label.setText(f"Rows: {rows_done} / {total_rows}")
+
+        canvas = np.ascontiguousarray(canvas)
+        h, w = canvas.shape[:2]
+        bytes_per_line = 3 * w
+        image = QImage(canvas.data, w, h, bytes_per_line, QImage.Format_RGB888).copy()
+        pixmap = QPixmap.fromImage(image).scaled(
+            self.clip_preview_label.width(), self.clip_preview_label.height(),
+            Qt.KeepAspectRatio, Qt.SmoothTransformation
+        )
+        self.clip_preview_label.setPixmap(pixmap)
+
     def format_time(self, seconds: float) -> str:
         """
         Format time in seconds to MM:SS or HH:MM:SS.
@@ -207,6 +307,11 @@ class ProgressWidget(QWidget):
         self.row_label.setText("Row: 0 / 0")
         self.elapsed_label.setText("Elapsed: 00:00")
         self.eta_label.setText("ETA: --:--")
+        self.last_tile_label.setText("Last tile: --")
+        self.tile_preview_label.clear()
+        self.clip_progress_bar.setValue(0)
+        self.clip_rows_label.setText("Not started")
+        self.clip_preview_label.clear()
         self.is_paused = False
         self.pause_resume_btn.setText("Pause")
         self.pause_resume_btn.setEnabled(False)
