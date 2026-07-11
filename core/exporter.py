@@ -29,6 +29,7 @@ from .tile_downloader import (
     lat_lon_to_tile_coords, tile_coords_to_bbox, meters_per_pixel_at_zoom
 )
 from .tile_sources import get_source_by_id, xy_to_quadkey
+from .tile_cache import default_cache_dir
 from utils.file_utils import save_cutline_geojson
 
 
@@ -70,9 +71,7 @@ class ExportConfig:
         self.render_delay = render_delay
         self.zoom_level = zoom_level
         # Default cache: ~/.tiffy/tile_cache  (cross-platform, persists between runs)
-        self.tile_cache_dir = tile_cache_dir or os.path.join(
-            os.path.expanduser('~'), '.tiffy', 'tile_cache'
-        )
+        self.tile_cache_dir = tile_cache_dir or default_cache_dir()
 
 
 class GeoTIFFExporter:
@@ -278,15 +277,15 @@ class GeoTIFFExporter:
             return tile_source.url_template.replace('{quadkey}', quadkey).replace('{s}', '0')
         return tile_source.get_tile_url(tx, ty, zoom)
 
-    def _process_tile(self, tx: int, ty: int, zoom: int, tile_source) -> Tuple[int, int, Optional[np.ndarray]]:
-        """Download and process a single tile (runs in thread pool)."""
+    def _process_tile(self, tx: int, ty: int, zoom: int, tile_source) -> Tuple[int, int, Optional[np.ndarray], bool]:
+        """Download and process a single tile (runs in thread pool). Returns (tx, ty, arr, from_cache)."""
         TILE_SIZE = 256
 
         while self.is_paused and not self.is_cancelled:
             time.sleep(0.1)
 
         if self.is_cancelled:
-            return tx, ty, None
+            return tx, ty, None, False
 
         url = self._get_tile_url(tile_source, tx, ty, zoom)
 
@@ -297,10 +296,12 @@ class GeoTIFFExporter:
         )
 
         img = None
+        from_cache = False
         if os.path.exists(cache_path):
             try:
                 img = Image.open(cache_path)
                 img.load()
+                from_cache = True
             except Exception:
                 img = None  # Corrupted cache entry — re-download
 
@@ -343,7 +344,7 @@ class GeoTIFFExporter:
         if is_white.any():
             arr[is_white] = 0
 
-        return tx, ty, arr
+        return tx, ty, arr, from_cache
 
     def _download_and_write_tiles(self, tile_source, zoom: int,
                                   min_tile_x: int, min_tile_y: int, max_tile_x: int, max_tile_y: int,
@@ -393,6 +394,8 @@ class GeoTIFFExporter:
                 **extra_options
             ) as dst:
                 tile_num = 0
+                cache_hits = 0
+                cache_misses = 0
 
                 with ThreadPoolExecutor(max_workers=NUM_WORKERS) as executor:
                     for ty in range(min_tile_y, max_tile_y + 1):
@@ -411,13 +414,18 @@ class GeoTIFFExporter:
                         # Write in left-to-right order — sequential writes keep GDAL happy
                         for tx in range(min_tile_x, max_tile_x + 1):
                             try:
-                                _, _, arr = row_futures[tx].result()
+                                _, _, arr, from_cache = row_futures[tx].result()
                             except Exception as e:
                                 self.log(f"  WARNING: Tile ({tx},{ty}) failed: {e}")
                                 continue
 
                             if arr is None:
                                 continue
+
+                            if from_cache:
+                                cache_hits += 1
+                            else:
+                                cache_misses += 1
 
                             tile_num += 1
                             self.current_tile = tile_num
@@ -462,9 +470,17 @@ class GeoTIFFExporter:
                         elapsed = time.time() - self.start_time
                         pct = row_num / tiles_y * 100
                         eta = elapsed / row_num * (tiles_y - row_num) if row_num < tiles_y else 0
-                        self.log(f"  Row {row_num}/{tiles_y} ({pct:.0f}%) - {row_time:.1f}s - ETA {eta/60:.1f} min")
+                        self.log(
+                            f"  Row {row_num}/{tiles_y} ({pct:.0f}%) - {row_time:.1f}s - ETA {eta/60:.1f} min "
+                            f"- cache: {cache_hits} hit / {cache_misses} miss"
+                        )
                         if self.progress_callback:
-                            self.progress_callback(tile_num, self.total_tiles, row_num, tiles_y, elapsed)
+                            self.progress_callback(
+                                tile_num, self.total_tiles, row_num, tiles_y, elapsed,
+                                cache_hits, cache_misses
+                            )
+
+            self.log(f"Cache summary: {cache_hits} tiles loaded from cache, {cache_misses} downloaded")
 
             elapsed_total = time.time() - self.start_time
             self.log(f"Download and export complete in {elapsed_total/60:.1f} min")

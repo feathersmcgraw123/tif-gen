@@ -14,7 +14,7 @@ class ExportWorker(QThread):
     """Worker thread for running GeoTIFF export in background."""
 
     # Signals
-    progress_updated = pyqtSignal(int, int, int, int, float)  # tile, total_tiles, row, total_rows, elapsed
+    progress_updated = pyqtSignal(int, int, int, int, float, int, int)  # tile, total_tiles, row, total_rows, elapsed, cache_hits, cache_misses
     log_message = pyqtSignal(str)  # Log message
     tile_downloaded = pyqtSignal(int, int, object)  # tile_x, tile_y, rgb numpy array
     clip_progress = pyqtSignal(object, int, int)  # preview_canvas, rows_done, total_rows
@@ -36,9 +36,10 @@ class ExportWorker(QThread):
         self.exporter.set_tile_callback(self._on_tile_downloaded)
         self.exporter.set_clip_callback(self._on_clip_progress)
 
-    def _on_progress(self, tile_num: int, total_tiles: int, row_num: int, total_rows: int, elapsed: float):
+    def _on_progress(self, tile_num: int, total_tiles: int, row_num: int, total_rows: int, elapsed: float,
+                      cache_hits: int = 0, cache_misses: int = 0):
         """Handle progress update from exporter."""
-        self.progress_updated.emit(tile_num, total_tiles, row_num, total_rows, elapsed)
+        self.progress_updated.emit(tile_num, total_tiles, row_num, total_rows, elapsed, cache_hits, cache_misses)
 
     def _on_log(self, message: str):
         """Handle log message from exporter."""

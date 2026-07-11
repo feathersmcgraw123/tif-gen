@@ -27,6 +27,7 @@ from core.tile_downloader import calculate_zoom_level, get_tile_bbox_for_polygon
 from .polygon_dialog import PolygonDialog
 from .config_widget import ConfigWidget
 from .progress_widget import ProgressWidget
+from .cache_dialog import CacheDialog
 
 
 class MainWindow(QMainWindow):
@@ -148,6 +149,13 @@ class MainWindow(QMainWindow):
             action.triggered.connect(lambda checked, code=lang_code: self.on_language_changed(code))
             self.language_menu.addAction(action)
             self.language_actions.append((lang_code, action))
+
+        # Tools menu
+        self.tools_menu = menubar.addMenu(self.translator.tr('menu_tools'))
+
+        self.cache_action = QAction(self.translator.tr('menu_tile_cache'), self)
+        self.cache_action.triggered.connect(self.show_tile_cache)
+        self.tools_menu.addAction(self.cache_action)
 
         # Help menu
         self.help_menu = menubar.addMenu(self.translator.tr('menu_help'))
@@ -291,9 +299,11 @@ class MainWindow(QMainWindow):
         self.export_worker.start()
         self.progress_widget.add_log("Export started...")
 
-    def on_progress_updated(self, tile_num, total_tiles, row_num, total_rows, elapsed):
+    def on_progress_updated(self, tile_num, total_tiles, row_num, total_rows, elapsed, cache_hits, cache_misses):
         """Handle progress update from export worker."""
-        self.progress_widget.update_progress(tile_num, total_tiles, row_num, total_rows, elapsed)
+        self.progress_widget.update_progress(
+            tile_num, total_tiles, row_num, total_rows, elapsed, cache_hits, cache_misses
+        )
 
     def on_log_message(self, message):
         """Handle log message from export worker."""
@@ -462,6 +472,11 @@ class MainWindow(QMainWindow):
         info_text += "<p><b>Note:</b> Usage of these tile sources is subject to their respective terms of service.</p>"
 
         QMessageBox.information(self, "Tile Sources", info_text)
+
+    def show_tile_cache(self):
+        """Show tile cache dialog."""
+        dialog = CacheDialog(self, self.translator)
+        dialog.exec()
 
     def closeEvent(self, event):
         """Handle window close event."""

@@ -83,6 +83,10 @@ class ProgressWidget(QWidget):
         self.last_tile_label = QLabel("Last tile: --")
         status_layout.addWidget(self.last_tile_label)
 
+        self.cache_label = QLabel("Cache: 0 hit / 0 miss")
+        self.cache_label.setStyleSheet("QLabel { color: #2a7; font-weight: bold; }")
+        status_layout.addWidget(self.cache_label)
+
         status_layout.addStretch()
 
         status_row.addLayout(status_layout)
@@ -180,7 +184,8 @@ class ProgressWidget(QWidget):
         self.cancel_btn.setEnabled(False)
         self.add_log("Cancelling export...")
 
-    def update_progress(self, tile_num: int, total_tiles: int, row_num: int, total_rows: int, elapsed: float):
+    def update_progress(self, tile_num: int, total_tiles: int, row_num: int, total_rows: int, elapsed: float,
+                         cache_hits: int = 0, cache_misses: int = 0):
         """
         Update progress display.
 
@@ -190,6 +195,8 @@ class ProgressWidget(QWidget):
             row_num: Current row number
             total_rows: Total number of rows
             elapsed: Elapsed time in seconds
+            cache_hits: Tiles loaded from the local tile cache so far
+            cache_misses: Tiles downloaded from the network so far
         """
         # Update progress bar
         if total_tiles > 0:
@@ -199,6 +206,7 @@ class ProgressWidget(QWidget):
         # Update labels
         self.tile_label.setText(f"Tiles: {tile_num} / {total_tiles}")
         self.row_label.setText(f"Row: {row_num} / {total_rows}")
+        self.cache_label.setText(f"Cache: {cache_hits} hit / {cache_misses} miss")
 
         # Format elapsed time
         elapsed_str = self.format_time(elapsed)
@@ -309,6 +317,7 @@ class ProgressWidget(QWidget):
         self.eta_label.setText("ETA: --:--")
         self.last_tile_label.setText("Last tile: --")
         self.tile_preview_label.clear()
+        self.cache_label.setText("Cache: 0 hit / 0 miss")
         self.clip_progress_bar.setValue(0)
         self.clip_rows_label.setText("Not started")
         self.clip_preview_label.clear()

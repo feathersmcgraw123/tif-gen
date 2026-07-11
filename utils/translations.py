@@ -57,6 +57,8 @@ ENGLISH = {
     'menu_about': 'About',
     'menu_tile_sources': 'Tile Sources',
     'menu_language': 'Language',
+    'menu_tools': 'Tools',
+    'menu_tile_cache': 'Tile Cache...',
 
     # Main window sections
     'section_polygon': '1. Define Export Polygon',
@@ -231,6 +233,8 @@ UKRAINIAN = {
     'menu_about': 'Про програму',
     'menu_tile_sources': 'Джерела тайлів',
     'menu_language': 'Мова',
+    'menu_tools': 'Інструменти',
+    'menu_tile_cache': 'Кеш тайлів...',
 
     # Main window sections
     'section_polygon': '1. Визначити полігон експорту',
