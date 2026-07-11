@@ -48,6 +48,7 @@ jobs:
           pyinstaller
           --name tiffy
           --onefile
+          --noupx
           --windowed
           --collect-all rasterio
           --hidden-import PyQt5.QtWebEngineWidgets
