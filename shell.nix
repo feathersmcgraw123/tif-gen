@@ -13,7 +13,7 @@ pkgs.mkShell {
 
   shellHook = ''
     echo "============================================================"
-    echo " Satellite Imagery Export Tool - NixOS"
+    echo " tif-gen - NixOS"
     echo "============================================================"
     echo ""
     echo " Run with: python main.py"

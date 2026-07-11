@@ -53,6 +53,8 @@ class MainWindow(QMainWindow):
         self.setCentralWidget(central_widget)
 
         main_layout = QVBoxLayout(central_widget)
+        main_layout.setSpacing(12)
+        main_layout.setContentsMargins(12, 12, 12, 12)
 
         # Create menu bar
         self.create_menu_bar()
@@ -65,7 +67,7 @@ class MainWindow(QMainWindow):
         polygon_layout = QVBoxLayout()
 
         self.polygon_status_label = QLabel(self.translator.tr('polygon_not_defined'))
-        self.polygon_status_label.setStyleSheet("QLabel { color: #666; font-style: italic; }")
+        self.polygon_status_label.setStyleSheet("QLabel { color: #9aa2b8; font-style: italic; }")
         polygon_layout.addWidget(self.polygon_status_label)
 
         self.define_polygon_btn = QPushButton(self.translator.tr('btn_define_polygon'))
@@ -95,9 +97,10 @@ class MainWindow(QMainWindow):
         export_layout.addStretch()
 
         self.start_export_btn = QPushButton(self.translator.tr('btn_start_export'))
+        self.start_export_btn.setObjectName("primaryButton")
         self.start_export_btn.setEnabled(False)
-        self.start_export_btn.setMinimumHeight(40)
-        self.start_export_btn.setStyleSheet("QPushButton { font-size: 14pt; font-weight: bold; }")
+        self.start_export_btn.setMinimumHeight(44)
+        self.start_export_btn.setStyleSheet("QPushButton { font-size: 14pt; }")
         self.start_export_btn.clicked.connect(self.on_start_export_clicked)
         export_layout.addWidget(self.start_export_btn)
 
@@ -170,7 +173,7 @@ class MainWindow(QMainWindow):
 
     def log_startup(self):
         """Log startup information."""
-        self.progress_widget.add_log("=== Satellite Imagery Export Tool ===")
+        self.progress_widget.add_log("=== tif-gen ===")
         self.progress_widget.add_log("Application started successfully")
 
         # List available tile sources
@@ -191,7 +194,7 @@ class MainWindow(QMainWindow):
             self.polygon_status_label.setText(
                 self.translator.tr('polygon_defined').format(num_vertices)
             )
-            self.polygon_status_label.setStyleSheet("QLabel { color: green; font-weight: bold; }")
+            self.polygon_status_label.setStyleSheet("QLabel { color: #4ade80; font-weight: bold; }")
 
             # Update config widget for size estimation
             self.config_widget.set_polygon_coords(self.polygon_coords)

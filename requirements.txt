@@ -1,4 +1,4 @@
-# Satellite Imagery Export Tool - Requirements
+# tif-gen - Requirements
 # Self-Contained Edition - Works on Windows, Linux, macOS, and NixOS!
 
 # GUI Framework

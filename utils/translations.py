@@ -50,7 +50,7 @@ class Translator:
 # English translations
 ENGLISH = {
     # Main window
-    'app_title': 'Satellite Imagery Export Tool',
+    'app_title': 'tif-gen',
     'menu_file': 'File',
     'menu_exit': 'Exit',
     'menu_help': 'Help',
@@ -189,8 +189,8 @@ ENGLISH = {
     'msg_export_in_progress_quit': 'An export is currently running. Are you sure you want to quit?\n\nThe export will be cancelled and progress will be lost.',
 
     # About dialog
-    'about_title': 'About Satellite Imagery Export Tool',
-    'about_text': '<h3>Satellite Imagery Export Tool</h3>'
+    'about_title': 'About tif-gen',
+    'about_text': '<h3>tif-gen</h3>'
                   '<p>Version 2.0 - Standalone Edition</p>'
                   '<p>Export high-resolution georeferenced GeoTIFF files from online tile sources.</p>'
                   '<p><b>Features:</b></p>'
@@ -226,7 +226,7 @@ ENGLISH = {
 # Ukrainian translations
 UKRAINIAN = {
     # Main window
-    'app_title': 'Інструмент експорту супутникових зображень',
+    'app_title': 'tif-gen',
     'menu_file': 'Файл',
     'menu_exit': 'Вихід',
     'menu_help': 'Довідка',
@@ -365,8 +365,8 @@ UKRAINIAN = {
     'msg_export_in_progress_quit': 'Експорт зараз виконується. Ви впевнені, що хочете вийти?\n\nЕкспорт буде скасовано, а прогрес буде втрачено.',
 
     # About dialog
-    'about_title': 'Про інструмент експорту супутникових зображень',
-    'about_text': '<h3>Інструмент експорту супутникових зображень</h3>'
+    'about_title': 'Про tif-gen',
+    'about_text': '<h3>tif-gen</h3>'
                   '<p>Версія 2.0 - Автономне видання</p>'
                   '<p>Експорт високороздільних геоприв\'язаних файлів GeoTIFF з онлайн-джерел тайлів.</p>'
                   '<p><b>Функції:</b></p>'

@@ -1,5 +1,5 @@
 """
-Satellite Imagery Export Tool - Main Entry Point
+tif-gen - Main Entry Point
 
 This application exports high-resolution georeferenced GeoTIFF files
 by downloading tiles directly from online tile servers (Google, ESRI, Bing, etc.).
@@ -28,23 +28,25 @@ from PyQt5.QtWidgets import QApplication
 from PyQt5.QtCore import Qt
 
 from ui.main_window import MainWindow
+from ui.theme import STYLESHEET
 
 
 def main():
     """Main application entry point."""
     print("=" * 60)
-    print("Satellite Imagery Export Tool v2.0")
+    print("tif-gen v2.0")
     print("Standalone Edition - No QGIS Required")
     print("=" * 60)
     print()
 
     # Create Qt application
     app = QApplication(sys.argv)
-    app.setApplicationName("Satellite Imagery Export Tool")
+    app.setApplicationName("tif-gen")
     app.setApplicationVersion("2.0")
 
     # Set application style (improves cross-platform appearance)
     app.setStyle('Fusion')
+    app.setStyleSheet(STYLESHEET)
 
     # Create and show main window
     window = MainWindow()

@@ -2,7 +2,7 @@
 setlocal
 
 echo ============================================================
-echo  Satellite Imagery Export Tool
+echo  tif-gen
 echo ============================================================
 echo.
 

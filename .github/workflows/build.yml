@@ -15,11 +15,11 @@ jobs:
       matrix:
         include:
           - os: windows-latest
-            artifact: tiffy-windows
+            artifact: tif-gen-windows
           - os: macos-latest
-            artifact: tiffy-macos
+            artifact: tif-gen-macos
           - os: ubuntu-latest
-            artifact: tiffy-linux
+            artifact: tif-gen-linux
 
     runs-on: ${{ matrix.os }}
 
@@ -46,7 +46,7 @@ jobs:
         if: runner.os == 'Windows'
         run: >
           pyinstaller
-          --name tiffy
+          --name tif-gen
           --onefile
           --noupx
           --windowed
@@ -59,7 +59,7 @@ jobs:
         if: runner.os == 'Linux'
         run: >
           pyinstaller
-          --name tiffy
+          --name tif-gen
           --windowed
           --collect-all rasterio
           --hidden-import PyQt5.QtWebEngineWidgets
@@ -70,9 +70,9 @@ jobs:
         if: runner.os == 'macOS'
         run: >
           pyinstaller
-          --name tiffy
+          --name tif-gen
           --windowed
-          --osx-bundle-identifier com.tiffy.app
+          --osx-bundle-identifier com.tifgen.app
           --collect-all rasterio
           --hidden-import PyQt5.QtWebEngineWidgets
           --hidden-import PyQt5.QtWebEngineCore
@@ -82,19 +82,19 @@ jobs:
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
-          Move-Item dist/tiffy.exe tiffy-windows.exe
-          Add-Content $env:GITHUB_ENV "ASSET_PATH=tiffy-windows.exe"
+          Move-Item dist/tif-gen.exe tif-gen-windows.exe
+          Add-Content $env:GITHUB_ENV "ASSET_PATH=tif-gen-windows.exe"
 
       - name: Package (macOS)
         if: runner.os == 'macOS'
         run: |
-          zip -r ${{ matrix.artifact }}.zip dist/tiffy.app
+          zip -r ${{ matrix.artifact }}.zip dist/tif-gen.app
           echo "ASSET_PATH=${{ matrix.artifact }}.zip" >> $GITHUB_ENV
 
       - name: Package (Linux)
         if: runner.os == 'Linux'
         run: |
-          zip -r ${{ matrix.artifact }}.zip dist/tiffy
+          zip -r ${{ matrix.artifact }}.zip dist/tif-gen
           echo "ASSET_PATH=${{ matrix.artifact }}.zip" >> $GITHUB_ENV
 
       - name: Upload artifact

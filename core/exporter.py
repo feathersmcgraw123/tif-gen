@@ -70,7 +70,7 @@ class ExportConfig:
         self.output_crs = output_crs
         self.render_delay = render_delay
         self.zoom_level = zoom_level
-        # Default cache: ~/.tiffy/tile_cache  (cross-platform, persists between runs)
+        # Default cache: ~/.tif-gen/tile_cache  (cross-platform, persists between runs)
         self.tile_cache_dir = tile_cache_dir or default_cache_dir()
 
 

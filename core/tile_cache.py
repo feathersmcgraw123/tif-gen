@@ -1,7 +1,7 @@
 """
 Tile cache inspection and management utilities.
 
-The tile cache lives at ~/.tiffy/tile_cache/{source_id}/{zoom}/{tx}/{ty}.png
+The tile cache lives at ~/.tif-gen/tile_cache/{source_id}/{zoom}/{tx}/{ty}.png
 and persists across runs (see core/exporter.py) so retries and overlapping
 polygons can reuse previously downloaded tiles instead of re-fetching them.
 """
@@ -14,8 +14,8 @@ from .tile_sources import get_source_by_id
 
 
 def default_cache_dir() -> str:
-    """Default tile cache directory: ~/.tiffy/tile_cache"""
-    return os.path.join(os.path.expanduser('~'), '.tiffy', 'tile_cache')
+    """Default tile cache directory: ~/.tif-gen/tile_cache"""
+    return os.path.join(os.path.expanduser('~'), '.tif-gen', 'tile_cache')
 
 
 def get_cache_stats(cache_dir: str) -> Dict:

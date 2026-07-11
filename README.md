@@ -1,4 +1,4 @@
-# Satellite Imagery Export Tool
+# tif-gen
 
 A **fully self-contained** desktop application for downloading and exporting high-resolution georeferenced GeoTIFF files from online satellite imagery tile servers.
 
@@ -30,9 +30,9 @@ Go to the [Releases page](https://github.com/feathersmcgraw123/tif-gen/releases)
 
 | Platform | File |
 |----------|------|
-| Windows  | `tiffy-windows.exe` — download and double-click, no extraction needed |
-| macOS    | `tiffy-macos.zip` — extract and double-click `tiffy.app` |
-| Linux    | `tiffy-linux.zip` — extract and run `./tiffy` |
+| Windows  | `tif-gen-windows.exe` — download and double-click, no extraction needed |
+| macOS    | `tif-gen-macos.zip` — extract and double-click `tif-gen.app` |
+| Linux    | `tif-gen-linux.zip` — extract and run `./tif-gen` |
 
 No Python or dependencies required.
 
